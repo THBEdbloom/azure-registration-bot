@@ -1,17 +1,21 @@
 import csv
 import io
 import json
+from datetime import datetime
+
+from flask import Flask, render_template, request, jsonify, Response
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from datetime import datetime
-from flask import Flask, render_template, request, jsonify, Response
+
 from database import init_db, save_user, get_all_users, search_users, get_statistics
 from validators import validate_field
+from clu_service import extract_clu_result
+
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key"
 
-# Reihenfolge des Registrierungsdialogs
+
 FIELDS = [
     ("first_name", "Wie lautet dein Vorname?"),
     ("last_name", "Wie lautet dein Nachname?"),
@@ -24,6 +28,19 @@ FIELDS = [
     ("city", "In welchem Ort wohnst du?"),
     ("country", "In welchem Land wohnst du?")
 ]
+
+CLU_ENTITY_MAPPING = {
+    "Vorname": "first_name",
+    "Nachname": "last_name",
+    "Geburtsdatum": "birth_date",
+    "Email": "email",
+    "Telefonnummer": "phone",
+    "Strasse": "street",
+    "Hausnummer": "house_number",
+    "PLZ": "postal_code",
+    "Ort": "city",
+    "Land": "country"
+}
 
 sessions = {}
 
@@ -38,32 +55,7 @@ def chat():
     data = request.get_json()
     session_id = data.get("session_id", "default")
     message = data.get("message", "").strip()
-
     message_lower = message.lower()
-
-    if message_lower in ["hilfe", "help", "?"]:
-        return jsonify({
-            "reply": (
-                "Ich helfe dir bei der Benutzerregistrierung. "
-                "Bitte beantworte die Fragen nacheinander. "
-                "Erfasst werden Vorname, Nachname, Geburtsdatum, E-Mail, Telefonnummer und Adresse. "
-                "Du kannst jederzeit 'abbrechen' schreiben, um die Registrierung zu beenden."
-            )
-        })
-
-    if message_lower in ["abbrechen", "cancel", "stop"]:
-        if session_id in sessions:
-            del sessions[session_id]
-        return jsonify({
-            "reply": "Die Registrierung wurde abgebrochen. Schreibe eine neue Nachricht, um erneut zu starten."
-        })
-
-    if message_lower in ["neu", "neustart", "restart"]:
-        if session_id in sessions:
-            del sessions[session_id]
-        return jsonify({
-            "reply": "Der Dialog wurde neu gestartet. Schreibe eine Nachricht, um mit der Registrierung zu beginnen."
-        })
 
     if session_id not in sessions:
         sessions[session_id] = {
@@ -77,42 +69,78 @@ def chat():
 
     state = sessions[session_id]
 
+    if message_lower in ["hilfe", "help", "?"]:
+        return jsonify({
+            "reply": (
+                "Ich helfe dir bei der Benutzerregistrierung. "
+                "Du kannst einzelne Antworten geben oder natürliche Sätze verwenden, z.B. "
+                "'Mein Name ist Max Mustermann und ich wohne in Berlin'. "
+                "Erfasst werden Vorname, Nachname, Geburtsdatum, E-Mail, Telefonnummer und Adresse. "
+                "Du kannst jederzeit 'abbrechen' schreiben."
+            )
+        })
+
+    if message_lower in ["abbrechen", "cancel", "stop"]:
+        del sessions[session_id]
+        return jsonify({
+            "reply": "Die Registrierung wurde abgebrochen. Schreibe eine neue Nachricht, um erneut zu starten."
+        })
+
+    if message_lower in ["neu", "neustart", "restart"]:
+        del sessions[session_id]
+        return jsonify({
+            "reply": "Der Dialog wurde neu gestartet. Schreibe eine Nachricht, um mit der Registrierung zu beginnen."
+        })
+
     if state["awaiting_confirmation"]:
-        if message.lower() in ["ja", "j", "yes"]:
+        if message_lower in ["ja", "j", "yes"]:
             save_user(state["user_data"])
             del sessions[session_id]
             return jsonify({
                 "reply": "Vielen Dank. Der Benutzeraccount wurde erfolgreich gespeichert."
             })
-        else:
-            del sessions[session_id]
-            return jsonify({
-                "reply": "Die Registrierung wurde abgebrochen. Starte neu, wenn du möchtest."
-            })
+
+        del sessions[session_id]
+        return jsonify({
+            "reply": "Die Registrierung wurde abgebrochen. Starte neu, wenn du möchtest."
+        })
+
+    detected_intent, detected_entities = extract_clu_result(message)
+
+    if detected_entities:
+        state["user_data"].update(detected_entities)
+
+    state["step"] = find_next_missing_step(state["user_data"])
+
+    if state["step"] >= len(FIELDS):
+        state["awaiting_confirmation"] = True
+        return jsonify({
+            "reply": create_summary(state["user_data"]) +
+                     "\n\nSind diese Angaben korrekt? Bitte antworte mit Ja oder Nein."
+        })
 
     current_step = state["step"]
     field_name, question = FIELDS[current_step]
 
-    is_valid, error_message = validate_field(field_name, message)
+    if field_name not in state["user_data"] or not state["user_data"][field_name]:
+        is_valid, error_message = validate_field(field_name, message)
 
-    if not is_valid:
-        return jsonify({
-            "reply": error_message + " " + question
-        })
+        if not is_valid:
+            return jsonify({
+                "reply": error_message + " " + question
+            })
 
-    state["user_data"][field_name] = message
-    state["step"] += 1
+        state["user_data"][field_name] = message
 
+    state["step"] = find_next_missing_step(state["user_data"])
 
     if state["step"] < len(FIELDS):
-        next_question = FIELDS[state["step"]][1]
-        return jsonify({"reply": next_question})
+        return jsonify({"reply": FIELDS[state["step"]][1]})
 
-    summary = create_summary(state["user_data"])
     state["awaiting_confirmation"] = True
-
     return jsonify({
-        "reply": summary + "\n\nSind diese Angaben korrekt? Bitte antworte mit Ja oder Nein."
+        "reply": create_summary(state["user_data"]) +
+                 "\n\nSind diese Angaben korrekt? Bitte antworte mit Ja oder Nein."
     })
 
 
@@ -126,6 +154,7 @@ def admin():
         users = get_all_users()
 
     return render_template("admin.html", users=users, search=search)
+
 
 @app.route("/export/csv")
 def export_csv():
@@ -179,6 +208,7 @@ def export_json():
         mimetype="application/json",
         headers={"Content-Disposition": "attachment; filename=users_export.json"}
     )
+
 
 @app.route("/export/statistics/pdf")
 def export_statistics_pdf():
@@ -242,6 +272,13 @@ Telefonnummer: {user_data.get("phone")}
 Straße: {user_data.get("street")} {user_data.get("house_number")}
 PLZ / Ort: {user_data.get("postal_code")} {user_data.get("city")}
 Land: {user_data.get("country")}"""
+
+
+def find_next_missing_step(user_data):
+    for index, (field_name, _) in enumerate(FIELDS):
+        if field_name not in user_data or not user_data[field_name]:
+            return index
+    return len(FIELDS)
 
 
 if __name__ == "__main__":

@@ -8,10 +8,15 @@
 <body>
     <div class="admin-container">
         <h1>Administrator-Dashboard</h1>
-        <p>Übersicht über gespeicherte Benutzeraccounts aus Azure SQL Database.</p>
+        <p>Übersicht über gespeicherte Benutzeraccounts aus der Azure SQL Database.</p>
 
         <form method="get" action="/admin" class="search-form">
-            <input type="text" name="search" placeholder="Suche nach Name, E-Mail, Ort oder PLZ" value="{{ search }}">
+            <input
+                type="text"
+                name="search"
+                placeholder="Suche nach Name, E-Mail, Ort oder PLZ"
+                value="{{ search }}"
+            >
             <button type="submit">Suchen</button>
             <a href="/admin">Zurücksetzen</a>
         </form>
@@ -26,26 +31,42 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Name</th>
+                    <th>Vorname</th>
+                    <th>Nachname</th>
                     <th>Geburtsdatum</th>
                     <th>E-Mail</th>
                     <th>Telefon</th>
-                    <th>Adresse</th>
+                    <th>Straße</th>
+                    <th>Hausnummer</th>
+                    <th>PLZ</th>
+                    <th>Ort</th>
+                    <th>Land</th>
                     <th>Erstellt am</th>
                 </tr>
             </thead>
             <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ user.Id }}</td>
-                    <td>{{ user.FirstName }} {{ user.LastName }}</td>
-                    <td>{{ user.BirthDate }}</td>
-                    <td>{{ user.Email }}</td>
-                    <td>{{ user.Phone }}</td>
-                    <td>{{ user.Street }} {{ user.HouseNumber }}, {{ user.PostalCode }} {{ user.City }}, {{ user.Country }}</td>
-                    <td>{{ user.CreatedAt }}</td>
-                </tr>
-                {% endfor %}
+                {% if users %}
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.Id }}</td>
+                        <td>{{ user.FirstName }}</td>
+                        <td>{{ user.LastName }}</td>
+                        <td>{{ user.BirthDate }}</td>
+                        <td>{{ user.Email }}</td>
+                        <td>{{ user.Phone }}</td>
+                        <td>{{ user.Street }}</td>
+                        <td>{{ user.HouseNumber }}</td>
+                        <td>{{ user.PostalCode }}</td>
+                        <td>{{ user.City }}</td>
+                        <td>{{ user.Country }}</td>
+                        <td>{{ user.CreatedAt }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="12">Keine Benutzer gefunden.</td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
 

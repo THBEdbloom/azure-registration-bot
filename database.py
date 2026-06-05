@@ -96,6 +96,7 @@ def get_all_users():
     conn.close()
     return users
 
+
 def search_users(search_term):
     conn = get_connection()
     cursor = conn.cursor()
@@ -119,6 +120,7 @@ def search_users(search_term):
     users = cursor.fetchall()
     conn.close()
     return users
+
 
 def get_statistics():
     conn = get_connection()

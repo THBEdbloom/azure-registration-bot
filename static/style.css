@@ -93,3 +93,13 @@ th {
     text-decoration: none;
     color: black;
 }
+
+a {
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.export-buttons a:hover,
+button:hover {
+    opacity: 0.85;
+}

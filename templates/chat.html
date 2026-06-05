@@ -8,12 +8,22 @@
 <body>
     <div class="chat-container">
         <h1>Azure Registration Bot</h1>
+        <p>Registrierungsassistent mit Azure SQL und Azure Conversational Language Understanding.</p>
 
         <div id="chat-box"></div>
 
         <div class="input-area">
-            <input type="text" id="message-input" placeholder="Nachricht eingeben...">
+            <input
+                type="text"
+                id="message-input"
+                placeholder="Nachricht eingeben..."
+                autocomplete="off"
+            >
             <button onclick="sendMessage()">Senden</button>
+        </div>
+
+        <div class="hint">
+            Beispiele: „Mein Name ist Max Mustermann“, „hilfe“, „abbrechen“, „neu“
         </div>
 
         <a href="/admin">Admin-Dashboard öffnen</a>
@@ -24,32 +34,52 @@
 
         async function sendMessage() {
             const input = document.getElementById("message-input");
-            const message = input.value;
+            const message = input.value.trim();
 
-            addMessage("Du", message);
+            if (!message && document.getElementById("chat-box").children.length > 0) {
+                return;
+            }
+
+            if (message) {
+                addMessage("Du", message);
+            }
+
             input.value = "";
+            input.focus();
 
-            const response = await fetch("/chat", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    message: message
-                })
-            });
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message: message
+                    })
+                });
 
-            const data = await response.json();
-            addMessage("Bot", data.reply);
+                const data = await response.json();
+                addMessage("Bot", data.reply);
+            } catch (error) {
+                addMessage("Bot", "Es ist ein Fehler bei der Kommunikation mit dem Server aufgetreten.");
+            }
         }
 
         function addMessage(sender, text) {
             const chatBox = document.getElementById("chat-box");
             const messageDiv = document.createElement("div");
+
             messageDiv.className = sender === "Du" ? "user-message" : "bot-message";
             messageDiv.innerText = sender + ": " + text;
+
             chatBox.appendChild(messageDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
+
+        document.getElementById("message-input").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
 
         window.onload = function() {
             sendMessage();
