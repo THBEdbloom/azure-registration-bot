@@ -95,3 +95,58 @@ def get_all_users():
     users = cursor.fetchall()
     conn.close()
     return users
+
+def search_users(search_term):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = f"%{search_term}%"
+
+    cursor.execute("""
+        SELECT 
+            Id, FirstName, LastName, BirthDate, Email, Phone,
+            Street, HouseNumber, PostalCode, City, Country, CreatedAt
+        FROM Users
+        WHERE 
+            FirstName LIKE ?
+            OR LastName LIKE ?
+            OR Email LIKE ?
+            OR City LIKE ?
+            OR PostalCode LIKE ?
+        ORDER BY CreatedAt DESC
+    """, (query, query, query, query, query))
+
+    users = cursor.fetchall()
+    conn.close()
+    return users
+
+def get_statistics():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM Users")
+    total_users = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT Country, COUNT(*) 
+        FROM Users 
+        GROUP BY Country 
+        ORDER BY COUNT(*) DESC
+    """)
+    users_by_country = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT City, COUNT(*) 
+        FROM Users 
+        GROUP BY City 
+        ORDER BY COUNT(*) DESC
+    """)
+    users_by_city = cursor.fetchall()
+
+    conn.close()
+
+    return {
+        "total_users": total_users,
+        "users_by_country": users_by_country,
+        "users_by_city": users_by_city
+    }

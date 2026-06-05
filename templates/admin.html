@@ -10,6 +10,18 @@
         <h1>Administrator-Dashboard</h1>
         <p>Übersicht über gespeicherte Benutzeraccounts aus Azure SQL Database.</p>
 
+        <form method="get" action="/admin" class="search-form">
+            <input type="text" name="search" placeholder="Suche nach Name, E-Mail, Ort oder PLZ" value="{{ search }}">
+            <button type="submit">Suchen</button>
+            <a href="/admin">Zurücksetzen</a>
+        </form>
+
+        <div class="export-buttons">
+            <a href="/export/csv">CSV exportieren</a>
+            <a href="/export/json">JSON exportieren</a>
+            <a href="/export/statistics/pdf">PDF-Statistik exportieren</a>
+        </div>
+
         <table>
             <thead>
                 <tr>

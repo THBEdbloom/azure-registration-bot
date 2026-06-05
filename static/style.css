@@ -69,3 +69,27 @@ th, td {
 th {
     background: #eeeeee;
 }
+
+.search-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.search-form input {
+    flex: 1;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.export-buttons a {
+    padding: 10px 14px;
+    background: #eeeeee;
+    border-radius: 6px;
+    text-decoration: none;
+    color: black;
+}
