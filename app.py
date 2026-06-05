@@ -63,9 +63,11 @@ def chat():
             "user_data": {},
             "awaiting_confirmation": False
         }
-        return jsonify({
-            "reply": "Hallo! Ich helfe dir bei der Benutzerregistrierung. " + FIELDS[0][1]
-        })
+
+        if not message:
+            return jsonify({
+                "reply": "Hallo! Ich helfe dir bei der Benutzerregistrierung. " + FIELDS[0][1]
+            })
 
     state = sessions[session_id]
 
@@ -105,12 +107,27 @@ def chat():
             "reply": "Die Registrierung wurde abgebrochen. Starte neu, wenn du möchtest."
         })
 
+    old_step = state["step"]
+
     detected_intent, detected_entities = extract_clu_result(message)
 
     if detected_entities:
         state["user_data"].update(detected_entities)
 
-    state["step"] = find_next_missing_step(state["user_data"])
+    new_step = find_next_missing_step(state["user_data"])
+    state["step"] = new_step
+
+    if detected_entities and new_step > old_step:
+        if state["step"] >= len(FIELDS):
+            state["awaiting_confirmation"] = True
+            return jsonify({
+                "reply": create_summary(state["user_data"]) +
+                        "\n\nSind diese Angaben korrekt? Bitte antworte mit Ja oder Nein."
+            })
+
+        return jsonify({
+            "reply": FIELDS[state["step"]][1]
+        })
 
     if state["step"] >= len(FIELDS):
         state["awaiting_confirmation"] = True
