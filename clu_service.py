@@ -1,13 +1,22 @@
 import os
 import requests
 from dotenv import load_dotenv
+from keyvault_service import get_secret
 
 load_dotenv()
 
-CLU_ENDPOINT = os.getenv("CLU_ENDPOINT")
-CLU_KEY = os.getenv("CLU_KEY")
-CLU_PROJECT_NAME = os.getenv("CLU_PROJECT_NAME")
-CLU_DEPLOYMENT_NAME = os.getenv("CLU_DEPLOYMENT_NAME")
+USE_KEY_VAULT = os.getenv("USE_KEY_VAULT", "false").lower() == "true"
+
+if USE_KEY_VAULT:
+    CLU_ENDPOINT = get_secret("clu-endpoint")
+    CLU_KEY = get_secret("clu-key")
+    CLU_PROJECT_NAME = get_secret("clu-project-name")
+    CLU_DEPLOYMENT_NAME = get_secret("clu-deployment-name")
+else:
+    CLU_ENDPOINT = os.getenv("CLU_ENDPOINT")
+    CLU_KEY = os.getenv("CLU_KEY")
+    CLU_PROJECT_NAME = os.getenv("CLU_PROJECT_NAME")
+    CLU_DEPLOYMENT_NAME = os.getenv("CLU_DEPLOYMENT_NAME")
 
 
 ENTITY_MAPPING = {

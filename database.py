@@ -1,13 +1,22 @@
 import os
 import pyodbc
 from dotenv import load_dotenv
+from keyvault_service import get_secret
 
 load_dotenv()
 
-DB_SERVER = os.getenv("DB_SERVER")
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
+USE_KEY_VAULT = os.getenv("USE_KEY_VAULT", "false").lower() == "true"
+
+if USE_KEY_VAULT:
+    DB_SERVER = get_secret("db-server")
+    DB_NAME = get_secret("db-name")
+    DB_USER = get_secret("db-user")
+    DB_PASSWORD = get_secret("db-password")
+else:
+    DB_SERVER = os.getenv("DB_SERVER")
+    DB_NAME = os.getenv("DB_NAME")
+    DB_USER = os.getenv("DB_USER")
+    DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 
 def get_connection():
