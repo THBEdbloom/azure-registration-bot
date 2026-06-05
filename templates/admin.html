@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="admin-container">
+        <h1>Administrator-Dashboard</h1>
+        <p>Übersicht über gespeicherte Benutzeraccounts aus Azure SQL Database.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Geburtsdatum</th>
+                    <th>E-Mail</th>
+                    <th>Telefon</th>
+                    <th>Adresse</th>
+                    <th>Erstellt am</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.Id }}</td>
+                    <td>{{ user.FirstName }} {{ user.LastName }}</td>
+                    <td>{{ user.BirthDate }}</td>
+                    <td>{{ user.Email }}</td>
+                    <td>{{ user.Phone }}</td>
+                    <td>{{ user.Street }} {{ user.HouseNumber }}, {{ user.PostalCode }} {{ user.City }}, {{ user.Country }}</td>
+                    <td>{{ user.CreatedAt }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a href="/">Zurück zum Bot</a>
+    </div>
+</body>
+</html>

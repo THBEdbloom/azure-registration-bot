@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Azure Registration Bot</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Azure Registration Bot</h1>
+
+        <div id="chat-box"></div>
+
+        <div class="input-area">
+            <input type="text" id="message-input" placeholder="Nachricht eingeben...">
+            <button onclick="sendMessage()">Senden</button>
+        </div>
+
+        <a href="/admin">Admin-Dashboard öffnen</a>
+    </div>
+
+    <script>
+        const sessionId = crypto.randomUUID();
+
+        async function sendMessage() {
+            const input = document.getElementById("message-input");
+            const message = input.value;
+
+            addMessage("Du", message);
+            input.value = "";
+
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    message: message
+                })
+            });
+
+            const data = await response.json();
+            addMessage("Bot", data.reply);
+        }
+
+        function addMessage(sender, text) {
+            const chatBox = document.getElementById("chat-box");
+            const messageDiv = document.createElement("div");
+            messageDiv.className = sender === "Du" ? "user-message" : "bot-message";
+            messageDiv.innerText = sender + ": " + text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        window.onload = function() {
+            sendMessage();
+        };
+    </script>
+</body>
+</html>
