@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Azure Registration Bot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <h1>Azure Registration Bot</h1>
+        <p>Registrierungsassistent mit Azure SQL und Azure Conversational Language Understanding.</p>
+
+        <div id="chat-box"></div>
+
+        <div class="input-area">
+            <input
+                type="text"
+                id="message-input"
+                placeholder="Nachricht eingeben..."
+                autocomplete="off"
+            >
+            <button onclick="sendMessage()">Senden</button>
+            <button onclick="startAzureSpeechRecognition()">🎤 Azure Speech</button>
+        </div>
+
+        <a href="/admin">Admin-Dashboard öffnen</a>
+    </div>
+
+    <script>
+        const sessionId = crypto.randomUUID();
+        let currentAudio = null;
+        let speechEnabled = true;
+
+        async function sendMessage() {
+            const input = document.getElementById("message-input");
+            const message = input.value.trim();
+
+            if (!message) {
+                return;
+            }
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message: message
+                    })
+                });
+
+                if (!response.ok) {
+                    addMessage("Bot", "Fehler: Der Server konnte die Nachricht nicht verarbeiten.");
+                    return;
+                }
+
+                const data = await response.json();
+
+                addMessage("Du", data.display_message || message);
+
+                addMessage("Bot", data.reply);
+
+                input.value = "";
+
+            } catch (error) {
+                console.error(error);
+                addMessage("Bot", "Fehler: Keine Verbindung zum Server.");
+            }
+        }
+
+        function addMessage(sender, text) {
+            const chatBox = document.getElementById("chat-box");
+            const messageDiv = document.createElement("div");
+
+            messageDiv.className = sender === "Du" ? "user-message" : "bot-message";
+            messageDiv.innerText = sender + ": " + text;
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            if (sender === "Bot"){
+                speakWithAzure(text);
+            }
+        }
+
+        document.getElementById("message-input").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        window.onload = function () {
+            addMessage(
+                "Bot",
+                "Hallo! Ich bin dein Registrierungsassistent. Du kannst die Registrierung starten oder direkt deine Daten nennen."
+            );
+        };
+
+        async function startAzureSpeechRecognition() {
+            stopCurrentSpeech();
+            try {
+                const tokenResponse = await fetch("/speech/token");
+                const tokenData = await tokenResponse.json();
+
+                const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(
+                    tokenData.token,
+                    tokenData.region
+                );
+
+                speechConfig.speechRecognitionLanguage = "de-DE";
+
+                const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+
+                const recognizer = new SpeechSDK.SpeechRecognizer(
+                    speechConfig,
+                    audioConfig
+                );
+
+                recognizer.recognizeOnceAsync(
+                    function(result) {
+                        speechEnabled = true;
+
+                        if (result.text) {
+                            document.getElementById("message-input").value = result.text;
+                            sendMessage();
+                        } else {
+                            alert("Es wurde keine Sprache erkannt.");
+                        }
+
+                        recognizer.close();
+                    },
+                    function(error) {
+                        speechEnabled = true;
+                        console.error(error);
+                        alert("Azure Speech konnte nicht gestartet werden.");
+                        recognizer.close();
+                    }
+                );
+
+            } catch (error) {
+                console.error(error);
+                alert("Fehler beim Abrufen des Azure Speech Tokens.");
+            }
+        }
+
+        async function speakWithAzure(text) {
+            if (!speechEnabled) {
+                return;
+            }
+
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio.src = "";
+                currentAudio.load();
+                currentAudio = null;
+            }
+
+            const response = await fetch("/speech/synthesize", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({text: text})
+            });
+
+            const data = await response.json();
+
+            if (data.success && speechEnabled) {
+                currentAudio = new Audio(data.audio_url + "?t=" + new Date().getTime());
+
+                currentAudio.play().catch(error => {
+                    console.log("Audio konnte nicht abgespielt werden:", error);
+                });
+            }
+        }
+
+        function stopCurrentSpeech() {
+            speechEnabled = false;
+
+            if (currentAudio){
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio.src = "";
+                currentAudio.load();
+                currentAudio = null;
+            }
+        }
+    </script>
+</body>
+</html>
