@@ -349,21 +349,19 @@ def synthesize_speech():
 )
 async def messages():
 
-    body = request.json
-
     auth_header = request.headers.get(
         "Authorization",
         ""
     )
 
     response = await ADAPTER.process_activity(
-        body,
+        request,
         auth_header,
         bot.on_turn
     )
 
     if response:
-        return jsonify(response.body)
+        return jsonify(response.body), response.status
 
     return "", 200
 
