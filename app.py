@@ -25,8 +25,11 @@ from services.speech_service import (
     synthesize_speech_to_file
 )
 
+from services.bot_service import RegistrationBot
+from services.bot_adapter import ADAPTER
 
 app = Flask(__name__)
+bot = RegistrationBot()
 app.secret_key = "dev-secret-key"
 
 
@@ -339,6 +342,30 @@ def synthesize_speech():
         "audio_url": "/static/bot_response.wav"
     })
 
+
+@app.route(
+    "/api/messages",
+    methods=["POST"]
+)
+async def messages():
+
+    body = request.json
+
+    auth_header = request.headers.get(
+        "Authorization",
+        ""
+    )
+
+    response = await ADAPTER.process_activity(
+        body,
+        auth_header,
+        bot.on_turn
+    )
+
+    if response:
+        return jsonify(response.body)
+
+    return "", 200
 
 if __name__ == "__main__":
 
