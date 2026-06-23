@@ -1,5 +1,36 @@
+# Virtual Environments
 venv/
 .venv/
+env/
+ENV/
+
+# Environment Files
 .env
+.env.*
+
+# Python Cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Build / Distribution
+build/
+dist/
+*.egg-info/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Runtime Files
+static/*.wav
+
+# Azure
+.local.settings.json
