@@ -354,8 +354,15 @@ async def messages():
         ""
     )
 
+    body = request.get_json()
+
+    bot_request = {
+        "body": body,
+        "headers": request.headers
+    }
+
     response = await ADAPTER.process_activity(
-        request,
+        bot_request,
         auth_header,
         bot.on_turn
     )
