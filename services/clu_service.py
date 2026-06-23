@@ -1,7 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
-from keyvault_service import get_secret
+from services.keyvault_service import get_secret
 
 load_dotenv()
 
