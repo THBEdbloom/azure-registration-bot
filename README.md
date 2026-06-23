@@ -280,6 +280,8 @@ Die Pipeline befindet sich im Verzeichnis:
 
 Bei Änderungen im Repository wird die Anwendung automatisch in Azure bereitgestellt.
 
+https://azure-registration-bot-gnebg6bqefa6fpgz.switzerlandnorth-01.azurewebsites.net/
+
 ---
 
 # Skalierbarkeit
