@@ -73,6 +73,7 @@ REJECT_WORDS = {
 class ChatSession:
     started: bool = False
     awaiting_confirmation: bool = False
+    awaiting_correction: bool = False
     user_data: dict = field(default_factory=dict)
     failed_attempts: int = 0
 
@@ -201,6 +202,27 @@ class DialogManager:
 
         lowered = message.lower().strip()
 
+        if session.awaiting_correction:
+
+            if (
+                lowered in CONFIRM_WORDS
+                or self.is_confirm(intent)
+                or "alles korrekt" in lowered
+                or "angaben sind korrekt" in lowered
+                or "doch" == lowered
+            ):
+
+                save_user(session.user_data)
+
+                self.reset_session(session_id)
+
+                return {
+                    "reply": (
+                        "Vielen Dank.\n\n"
+                        "Der Benutzeraccount wurde erfolgreich gespeichert."
+                    )
+                }
+
         if (
             lowered in CONFIRM_WORDS
             or self.is_confirm(intent)
@@ -221,6 +243,8 @@ class DialogManager:
             lowered in REJECT_WORDS
             or self.is_reject(intent)
         ):
+            
+            session.awaiting_correction = True
 
             return {
                 "reply": (
@@ -231,6 +255,8 @@ class DialogManager:
             }
 
         if entities:
+
+            session.awaiting_correction = False
 
             result = self.apply_entities(
                 session,
@@ -600,6 +626,45 @@ Postleitzahl: {user_data.get("postal_code")}
 Ort: {user_data.get("city")}
 Land: {user_data.get("country")}
 """.strip()
+
+    def create_help_message(self, session):
+
+        text = (
+            "Ich unterstütze dich bei der Registrierung.\n\n"
+        )
+
+        if not session.started:
+            return (
+                text
+                + "Schreibe einfach 'Start', um die Registrierung zu beginnen."
+            )
+        
+        if session.awaiting_correction:
+            return (
+                text
+                + "Nenne einfach die Angabe, die geändert werden soll.\n\n"
+                + "Beispiele:\n"
+                + "• Meine E-Mail ist max@example.de\n"
+                + "• Meine Telefonnummer ist +4915112345678\n"
+                + "• Mein Nachname ist Mustermann"
+            )
+
+        if session.awaiting_confirmation:
+            return (
+                text
+                + "Bitte bestätige deine Angaben mit 'Ja' oder antworte mit 'Nein', wenn etwas geändert werden soll."
+            )
+
+        missing = self.get_next_missing_field(session.user_data)
+
+        if missing:
+            return (
+                text
+                + "Aktuell benötige ich folgende Angabe:\n\n"
+                + FIELD_QUESTIONS[missing]
+            )
+
+        return text
 
     def get_example_for_field(
         self,
