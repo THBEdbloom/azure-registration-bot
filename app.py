@@ -29,9 +29,11 @@ from services.bot_service import RegistrationBot
 from services.bot_adapter import ADAPTER
 
 app = Flask(__name__)
-bot = RegistrationBot()
 app.secret_key = "dev-secret-key"
 
+init_db()
+
+bot = RegistrationBot()
 
 @app.route("/")
 def index():
@@ -373,8 +375,6 @@ async def messages():
     return "", 200
 
 if __name__ == "__main__":
-
-    init_db()
 
     app.run(
         debug=True
